@@ -8,26 +8,36 @@ http.listen(PORT, function() {
   console.log(`listening on ${PORT}`);
 });
 
-let rooms = [];
+let users = 0;
+let player = 0;
 
 io.on('connection', socket => {
   console.log('Connected', socket.id);
-
+  socket.on('disconnect', () => {
+    console.log('user disconnected');
+  });
+  //This
   socket.on('join', userName => {
     console.log('userName', userName);
-    if (rooms[0] === userName) {
-      io.emit('room', 'Username taken by your opponent');
+    users++;
+    if (users > 2) {
+      io.emit('status', `connection rejected play in session`);
     }
-    if (rooms[0] !== userName) {
-      rooms.push(userName);
+    if (users <= 2) {
+      io.emit('status', `connection successful`);
     }
+  });
+  socket.on(`ready`, () => {
+    if (player < 2) {
+      player++;
+      io.emit(`playerNumber`, player);
+      if (player === 2) {
+        io.sockets.emit(`room-ready`, true);
+      }
+    }
+  });
 
-    if (rooms.length < 2 && rooms[0] !== userName) {
-      io.emit('room', 'waiting for other user');
-    }
-    if (rooms.length === 2) {
-      io.emit('room', rooms);
-      rooms = [];
-    }
+  socket.on(`movement`, movement => {
+    socket.broadcast.emit(`response`, movement);
   });
 });
